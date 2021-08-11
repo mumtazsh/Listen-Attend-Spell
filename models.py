@@ -8,24 +8,12 @@ from weight_drop import WeightDrop
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class Attention(nn.Module):
-    '''
-    Attention is calculated using key, value and query from Encoder and decoder.
-    Below are the set of operations you need to perform for computing attention:
-        energy = bmm(key, query)
-        attention = softmax(energy)
-        context = bmm(attention, value)
-    '''
+    
     def __init__(self):
         super(Attention, self).__init__()
 
     def forward(self, query, key, value, lens):
-        '''
-        :param query :(batch_size, hidden_size) Query is the output of LSTMCell from Decoder
-        :param keys: (batch_size, max_len, encoder_size) Key Projection from Encoder
-        :param values: (batch_size, max_len, encoder_size) Value Projection from Encoder
-        :return context: (batch_size, encoder_size) Attended Context
-        :return attention_mask: (batch_size, max_len) Attention mask that can be plotted 
-        '''
+        
         #print(key.size())
         #print(query.size())
         energy = torch.bmm(key, query.unsqueeze(2)).squeeze(2)
@@ -40,21 +28,14 @@ class Attention(nn.Module):
 class pBLSTM(nn.Module):
     '''
     Pyramidal BiLSTM
-    The length of utterance (speech input) can be hundereds to thousands of frames long.
-    The Paper reports that a direct LSTM implementation as Encoder resulted in slow convergence,
-    and inferior results even after extensive training.
-    The major reason is inability of AttendAndSpell operation to extract relevant information
-    from a large number of input steps.
+    
     '''
     def __init__(self, input_dim, hidden_dim):
         super(pBLSTM, self).__init__()
         self.blstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, num_layers=1, bidirectional=True)
 
     def forward(self, x):
-        '''
-        :param x :(N, T) input to the pBLSTM
-        :return output: (N, T, H) encoded sequence from pyramidal Bi-LSTM 
-        '''
+        
         x, x_lens = utils.rnn.pad_packed_sequence(x)
         #print(x.size())
         x = x.transpose(0,1)
@@ -66,15 +47,12 @@ class pBLSTM(nn.Module):
         return self.blstm(x)[0]
 
 class Encoder(nn.Module):
-    '''
-    Encoder takes the utterances as inputs and returns the key and value.
-    Key and value are nothing but simple projections of the output from pBLSTM network.
-    '''
+    
     def __init__(self, input_dim, hidden_dim, value_size=128,key_size=128):
         super(Encoder, self).__init__()
         self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, num_layers=1, bidirectional=True)
         
-        ### Add code to define the blocks of pBLSTMs! ###
+        
         self.pblstm1 = pBLSTM(4*hidden_dim, hidden_dim)
         self.pblstm2 = pBLSTM(4*hidden_dim, hidden_dim)
         self.pblstm3 = pBLSTM(4*hidden_dim, hidden_dim)
@@ -88,7 +66,7 @@ class Encoder(nn.Module):
         
         outputs, _ = self.lstm(rnn_inp)
         
-        ### Use the outputs and pass it through the pBLSTM blocks! ###
+        
         
         outputs = self.pblstm1(outputs)
         outputs = self.pblstm2(outputs)
@@ -102,13 +80,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    '''
-    As mentioned in a previous recitation, each forward call of decoder deals with just one time step, 
-    thus we use LSTMCell instead of LSLTM here.
-    The output from the second LSTMCell can be used as query here for attention module.
-    In place of value that we get from the attention, this can be replace by context we get from the attention.
-    Methods like Gumble noise and teacher forcing can also be incorporated for improving the performance.
-    '''
+    
     def __init__(self, vocab_size, hidden_dim, value_size=128, key_size=128, isAttended=False):
         super(Decoder, self).__init__()
         self.embedding = nn.Embedding(vocab_size, hidden_dim, padding_idx=0)
@@ -122,13 +94,7 @@ class Decoder(nn.Module):
         self.character_prob = nn.Linear(key_size + value_size, vocab_size)
 
     def forward(self, key, values, lens, text=None, isTrain=True):
-        '''
-        :param key :(T, N, key_size) Output of the Encoder Key projection layer
-        :param values: (T, N, value_size) Output of the Encoder Value projection layer
-        :param text: (N, text_len) Batch input of text with text_length
-        :param isTrain: Train or eval mode
-        :return predictions: Returns the character perdiction probability 
-        '''
+        
         batch_size = key.shape[1]
 
         if (isTrain == True):
@@ -145,10 +111,7 @@ class Decoder(nn.Module):
         all_attentions=[]
         context = values[0,:,:]
         for i in range(max_len):
-            # * Implement Gumble noise and teacher forcing techniques 
-            # * When attention is True, replace values[i,:,:] with the context you get from attention.
-            # * If you haven't implemented attention yet, then you may want to check the index and break 
-            #   out of the loop so you do not get index out of range errors. 
+             
 
             if (isTrain):
                 if random() <= 0.9 or i == 0:
@@ -195,10 +158,7 @@ class Decoder(nn.Module):
 
 
 class Seq2Seq(nn.Module):
-    '''
-    We train an end-to-end sequence to sequence model comprising of Encoder and Decoder.
-    This is simply a wrapper "model" for your encoder and decoder.
-    '''
+    
     def __init__(self, input_dim, vocab_size, hidden_dim, value_size=128, key_size=128, isAttended=False):
         super(Seq2Seq, self).__init__()
         self.encoder = Encoder(input_dim, hidden_dim, value_size, key_size)
@@ -215,7 +175,7 @@ class Seq2Seq(nn.Module):
 
 
     
-# Model that takes packed sequences in training
+
 class PackedLanguageModel(nn.Module):
     
     def __init__(self,vocab_size,embed_size,hidden_size, nlayers, stop):
@@ -234,20 +194,19 @@ class PackedLanguageModel(nn.Module):
         lens = [len(s) for s in seq_list] # lens of all lines (already sorted)
         bounds = [0]
         for l in lens:
-            bounds.append(bounds[-1]+l) # bounds of all lines in the concatenated sequence. Indexing into the list to 
-                                        # see where the sequence occurs. Need this at line marked **
+            bounds.append(bounds[-1]+l) 
         seq_concat = torch.cat(seq_list) # concatenated sequence
         embed_concat = self.embedding(seq_concat) # concatenated embeddings
-        embed_list = [embed_concat[bounds[i]:bounds[i+1]] for i in range(batch_size)] # embeddings per line **
-        packed_input = utils.rnn.pack_sequence(embed_list, enforce_sorted=False) # packed version
+        embed_list = [embed_concat[bounds[i]:bounds[i+1]] for i in range(batch_size)] 
+        packed_input = utils.rnn.pack_sequence(embed_list, enforce_sorted=False) 
         
-        # alternatively, you could use rnn.pad_sequence, followed by rnn.pack_padded_sequence
+        
         
         
         
         hidden = None
         output_packed,hidden = self.rnn(packed_input,hidden)
-        output_padded, _ = utils.rnn.pad_packed_sequence(output_packed) # unpacked output (padded). Also gives you the lengths
+        output_padded, _ = utils.rnn.pad_packed_sequence(output_packed) 
         output_flatten = torch.cat([output_padded[:lens[i],i] for i in range(batch_size)]) # concatenated output
         scores_flatten = self.scoring(output_flatten) # concatenated logits
         return scores_flatten # return concatenated logits
@@ -275,9 +234,7 @@ class PackedLanguageModel(nn.Module):
     
     
 class LanguageModel(nn.Module):
-    """
-        TODO: Define your model here
-    """
+    
     def __init__(self, vocab_size, embed_size,hidden_size, nlayers):
         super(LanguageModel, self).__init__()
         self.vocab_size = vocab_size
@@ -297,7 +254,7 @@ class LanguageModel(nn.Module):
         #self.rnn = WeightDropLSTM(input_size = self.embed_size,hidden_size=self.hidden_size,num_layers=self.nlayers, dropout=0.3, weight_dropout=0.5)
         self.scoring = nn.Linear(self.hidden_size,vocab_size)
         self.init_weights()
-        #raise NotImplemented
+        
 
     def init_weights(self):
         initrange = 0.1
@@ -311,7 +268,7 @@ class LanguageModel(nn.Module):
         return [(weight.new(1, bsz, self.hidden_size).zero_(), weight.new(1, bsz, self.hidden_size).zero_()) for l in range(self.nlayers)]
             
     def forward(self, x, hidden):
-        # Feel free to add extra arguments to forward (like an argument to pass in the hiddens)
+        
         batch_size = x.size(1)
         #print(batch_size)
         #x1 = self.dp1(x).long()
@@ -347,7 +304,7 @@ class LanguageModel(nn.Module):
         #output_flatten = self.scoring(output_lstm_flatten) #(L*N) x V
         #return output_flatten
         #return output_flatten.view(-1,batch_size,self.vocab_size)
-        #raise NotImplemented
+        
     
     def repackage_hidden(self,h):
         """Wraps hidden states in new Tensors,

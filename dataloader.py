@@ -20,16 +20,9 @@ def load_data():
     return speech_train, speech_valid, speech_test, transcript_train, transcript_valid
 
 
-'''
-Transforms alphabetical input to numerical input, replace each letter by its corresponding 
-index from letter_list
-'''
+
 def transform_letter_to_index(transcript, letter_list):
-    '''
-    :param transcript :(N, ) Transcripts are the text input
-    :param letter_list: Letter list defined above
-    :return letter_to_index_list: Returns a list for all the transcript sentence to index
-    '''
+    
     out = []
     for utt in transcript: #sentence
         temp=[]
@@ -43,22 +36,7 @@ def transform_letter_to_index(transcript, letter_list):
     #print(len(out))
     return np.array(out, dtype=object)
 
-
-'''
-Optional, create dictionaries for letter2index and index2letter transformations
-'''
-def create_dictionaries(letter_list):
-    letter2index = dict()
-    index2letter = dict()
-    return letter2index, index2letter
-
-
 class Speech2TextDataset(Dataset):
-    '''
-    Dataset class for the speech to text data, this may need some tweaking in the
-    getitem method as your implementation in the collate function may be different from
-    ours. 
-    '''
     def __init__(self, speech, text=None, isTrain=True):
         self.speech = speech
         self.isTrain = isTrain
@@ -103,8 +81,8 @@ class LinesDataset(Dataset):
     def __len__(self):
         return len(self.lines)
 
-# collate fn lets you control the return value of each batch
-# for packed_seqs, you want to return your data sorted by length
+
+
 def collate_lines(seq_list):
     inputs,targets = zip(*seq_list)
     lens = [len(seq) for seq in inputs]
@@ -114,20 +92,14 @@ def collate_lines(seq_list):
     return inputs,targets
 
 class LanguageModelDataLoader(DataLoader):
-    """
-        TODO: Define data loader logic here
-    """
     def __init__(self, dataset, batch_size, shuffle=True):
         self.dataset = dataset
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.seq_len = 71
-        
-        #raise NotImplemented
-
 
     def __iter__(self):
-        # concatenate your articles and build into batches
+        
         if self.shuffle == True:
             np.random.shuffle(self.dataset)
         text = np.concatenate(self.dataset)

@@ -15,9 +15,6 @@ LETTER_LIST = ['<pad>', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', '
                'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '-', "'", '.', '_', '+', ' ','<sos>','<eos>']
 
 def main():
-    #lang_model = LanguageModel(len(LETTER_LIST))
-    
-    
     
     model = Seq2Seq(input_dim=40, vocab_size=len(LETTER_LIST), hidden_dim=256, isAttended=True)
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
@@ -26,19 +23,22 @@ def main():
     batch_size = 64 if DEVICE == 'cuda' else 1
 
     speech_train, speech_valid, speech_test, transcript_train, transcript_valid = load_data()
-    #print(speech_train.dtype)
+    
     character_text_train = transform_letter_to_index(transcript_train, LETTER_LIST)
     character_text_valid = transform_letter_to_index(transcript_valid, LETTER_LIST)
-    print(character_text_train[0].shape)
+    
     train_dataset = Speech2TextDataset(speech_train, character_text_train)
     val_dataset = Speech2TextDataset(speech_valid, character_text_valid)
     test_dataset = Speech2TextDataset(speech_test, None, False)
 
-    
-    
+      
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_train)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_train)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_test)
+    
+    lang_model = PackedLanguageModel(len(LETTER_LIST),512,512,3, stop=34)
+
+    #Alternate Language Model - Training
     """
     lang_model = LanguageModel(len(LETTER_LIST),400,1150,3)
     lm_train_loader = LanguageModelDataLoader(dataset=character_text_train, batch_size=80, shuffle=True)
@@ -58,9 +58,9 @@ def main():
             #print("Saving model, predictions and generated output for epoch "+str(epoch)+" with NLL: "+ str(best_nll))
             torch.save(lang_model.state_dict(), './best-val-lang-model-weight-drop.pt')
     """
-    #lang_model = PackedLanguageModel(len(LETTER_LIST),512,256,2, stop=34)
-    lang_model = PackedLanguageModel(len(LETTER_LIST),512,512,3, stop=34)
-    #lang_model = PackedLanguageModel2(len(LETTER_LIST),512,1150,3, stop=34)
+    
+    #Seq2Seq - Training
+    
     """
     best_perp = 1.75
     model.load_state_dict(torch.load('./best-val-new.pt'))
@@ -75,9 +75,10 @@ def main():
     #torch.save(model.state_dict(), './final-model-new.pt')
     
     """
+    #Language Model - Training
     """
     lang_model = lang_model.to(DEVICE)
-    #lm_optimizer = torch.optim.SGD(lang_model.parameters(), lr=30, weight_decay=1.2e-6)
+    
     lm_optimizer = torch.optim.Adam(lang_model.parameters(),lr=0.0001, weight_decay=1e-6)
     
     lm_train_dataset = LinesDataset(character_text_train)

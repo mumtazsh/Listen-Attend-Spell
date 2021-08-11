@@ -5,7 +5,7 @@ from tests import test_prediction, test_generation
 import pandas as pd
 import os
 from util import plot_attn_flow
-### Add Your Other Necessary Imports Here! ###
+
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -19,49 +19,34 @@ def train(model, train_loader, criterion, optimizer, epoch):
     train_loss = 0
     batch_id = 0
     f = open("perp.txt","w")
-    # 1) Iterate through your loader
+    
     for batch_idx, (X, X_lens, Y, Y_lens) in enumerate(train_loader):   
-        optimizer.zero_grad()   # .backward() accumulates gradients
-        # 2) Use torch.autograd.set_detect_anomaly(True) to get notices about gradient explosion
-        # 3) Set the inputs to the device.
+        optimizer.zero_grad()   
+        
         X = X.to(DEVICE)
-        Y = Y.to(DEVICE) # all data & model on same device
-        #X_lens = X_lens.to(DEVICE)
-        #Y_lens = Y_lens.to(DEVICE)
-        # 4) Pass your inputs, and length of speech into the model.
-        #print(Y.size())
+        Y = Y.to(DEVICE) 
+        
         out, att = model(X, X_lens, Y)
-        # 5) Generate a mask based on the lengths of the text to create a masked loss.
+        
         Y_lens = torch.unsqueeze(Y_lens,0)
         mask = torch.tensor(np.arange(Y.size(1)-1)).unsqueeze(1) < Y_lens
-        # 5.1) Ensure the mask is on the device and is the correct shape.
-        mask = mask.to(DEVICE)
-        # 6) If necessary, reshape your predictions and origianl text input 
-        # 6.1) Use .contiguous() if you need to. 
         
-        # 7) Use the criterion to get the loss.
-        #print(out.size())
-        #print(Y.size())
+        mask = mask.to(DEVICE)
+        
         loss = criterion(out.transpose(1,2)[:,:,:-1], Y[:,1:])
-        #print(loss.item())
-        #running_loss += loss.item()
-        #print("The batch is ",batch_idx)
-        # 8) Use the mask to calculate a masked loss. 
+         
         masked_loss = torch.sum(mask.transpose(0,1)*loss)
-        #print(mask.size())
-        #print(loss.size())
-        #print(loss.dtype)
-        # 9) Run the backward pass on the masked loss. 
+         
 
         masked_loss.backward()
-        # 10) Use torch.nn.utils.clip_grad_norm(model.parameters(), 2)
+        
         torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
-        # 11) Take a step with your optimizer
+        
         optimizer.step()
-        # 12) Normalize the masked loss
+        
         
         masked_loss /= torch.sum(Y_lens)
-        # 13) Optionally print the training loss after every N batches
+        
         train_loss += masked_loss.item()
         batch_id+=1
         if not os.path.exists('./experiments'):
@@ -119,7 +104,7 @@ def val(model, val_loader, criterion, epoch):
     return np.exp(val_lpw)
     
 def test(model, lang_model, test_loader, epoch):
-    ### Write your test code here! ###
+    
     with torch.no_grad():
         model.eval()
         model.to(DEVICE)
@@ -234,7 +219,7 @@ def test(model, lang_model, test_loader, epoch):
     data = {'Id': Id, 'label':Predictions }
     df = pd.DataFrame(data)
     df.to_csv("submission_lm_2.csv", header=True, index=False)
-    #pass
+    
     
   
     
@@ -278,14 +263,12 @@ def train_epoch_packed(model, optimizer, train_loader, val_loader):
     print("Validation perplexity :",np.exp(val_lpw),"\n")
     return val_lpw
 
-# model trainer
+
 from tqdm import tqdm
 class LanguageModelTrainer:
     def __init__(self, model, loader, val_loader, optimizer, max_epochs=1):
-        """
-            Use this class to train your model
-        """
-        # feel free to add any other parameters here
+        
+        
         self.model = model
         self.loader = loader
         self.val_loader = val_loader
@@ -297,7 +280,7 @@ class LanguageModelTrainer:
         self.max_epochs = max_epochs
         
         
-        # TODO: Define your optimizer and criterion here
+        
         self.optimizer = optimizer #torch.optim.SGD(model.parameters(), lr=30, weight_decay=1.2e-6)
         #self.criterion = nn.NLLLoss()
         self.criterion = torch.nn.CrossEntropyLoss(reduction="mean")
@@ -333,10 +316,7 @@ class LanguageModelTrainer:
         self.train_losses.append(epoch_loss)
 
     def train_batch(self, inputs, targets, hidden):
-        """ 
-            TODO: Define code for training a single batch of inputs
         
-        """
         self.model.train()
         hidden = self.model.repackage_hidden(hidden)
         
@@ -355,10 +335,7 @@ class LanguageModelTrainer:
         #raise NotImplemented
 
     def val_batch(self, inputs, targets, hidden):
-        """ 
-            TODO: Define code for training a single batch of inputs
         
-        """
         self.model.eval()
         hidden = self.model.repackage_hidden(hidden)
         
@@ -410,12 +387,7 @@ class LanguageModelTrainer:
     
 class TestLanguageModel:
     def prediction(inp, model):
-        """
-            TODO: write prediction code here
-            
-            :param inp:
-            :return: a np.ndarray of logits
-        """
+        
         inp = torch.tensor(inp).long()
         inp = inp.transpose(0,1)
         
@@ -424,7 +396,7 @@ class TestLanguageModel:
         out = model(inp, hidden)
        
         return out[0][-1].detach().numpy()
-        #raise NotImplemented
+        
 
         
     
