@@ -61,7 +61,7 @@ def main():
     
     #Seq2Seq - Training
     
-    """
+    
     best_perp = 1.75
     model.load_state_dict(torch.load('./best-val-new.pt'))
     for epoch in tqdm(range(nepochs)):
@@ -74,9 +74,9 @@ def main():
     #model.load_state_dict(torch.load('./exp-1.pt'))
     #torch.save(model.state_dict(), './final-model-new.pt')
     
-    """
+    
     #Language Model - Training
-    """
+    
     lang_model = lang_model.to(DEVICE)
     
     lm_optimizer = torch.optim.Adam(lang_model.parameters(),lr=0.0001, weight_decay=1e-6)
@@ -96,7 +96,7 @@ def main():
             torch.save(lang_model.state_dict(), './best-val-lang-model-2.pt')
     
     #torch.save(lang_model.state_dict(), "./trained_lang_model_2.pt")
-    """
+    
     
     model.load_state_dict(torch.load('./best-val-new-2.pt'))
     lang_model.load_state_dict(torch.load('./best-val-lang-model-2.pt'))
